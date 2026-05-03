@@ -5,104 +5,181 @@ import { supabase } from "../lib/supabase";
 import type { Student } from "../lib/types";
 
 export default function StudentsPage() {
-  const [students, setStudents] = useState<Student[]>([]);
-  const [showForm, setShowForm] = useState(false);
+    const [user, setUser] = useState<any>(null);
+    const [students, setStudents] = useState<Student[]>([]);
+    const [showForm, setShowForm] = useState(false);
 
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
+    const [name, setName] = useState("");
+    const [price, setPrice] = useState("");
 
-  // LOAD students from DB
-  async function fetchStudents() {
-    const { data, error } = await supabase.from("students").select("*");
+    const [editingId, setEditingId] = useState<string | null>(null);
+    useEffect(() => {
+        supabase.auth.getUser().then(({ data }) => {
+            console.log("INITIAL USER:", data.user);
+            setUser(data.user);
+        });
 
-    if (error) {
-      console.error(error);
-      return;
+        const {
+            data: { subscription },
+        } = supabase.auth.onAuthStateChange((_event, session) => {
+            console.log("AUTH CHANGE:", session?.user);
+            setUser(session?.user ?? null);
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+    // FETCH
+    async function fetchStudents() {
+        const { data, error } = await supabase.from("students").select("*");
+
+        if (error) {
+        console.error(error);
+        return;
+        }
+
+        setStudents(data);
     }
 
-    setStudents(data);
-  }
+    useEffect(() => {
+        fetchStudents();
+    }, []);
 
-  useEffect(() => {
-    fetchStudents();
-  }, []);
+    // ADD or UPDATE
+    async function handleSaveStudent() {
+        if (!name || !price) return;
 
-  // ADD student to DB
-  async function handleAddStudent() {
-    if (!name || !price) return;
+        if (editingId) {
+        // UPDATE
+        const { error } = await supabase
+            .from("students")
+            .update({
+            name,
+            price: Number(price),
+            })
+            .eq("id", editingId);
 
-    const { error } = await supabase.from("students").insert([
-      {
-        name,
-        price: Number(price),
-      },
-    ]);
+        if (error) return console.error(error);
+        } else {
+        // INSERT
+            console.log(user);
+            if (!user) {
+                alert("You must be logged in");
+                return;
+            }
+            const { error } = await supabase.from("students").insert([
+                {
+                name,
+                    price: Number(price),
+                    teacher_id: user?.id,
+                },
+            ]);
+        if (error) return console.error(error);
+        }
 
-    if (error) {
-      console.error(error);
-      return;
+        // reset
+        setName("");
+        setPrice("");
+        setEditingId(null);
+        setShowForm(false);
+
+        fetchStudents();
     }
 
-    setName("");
-    setPrice("");
-    setShowForm(false);
+    // DELETE
+    async function handleDelete(id: string) {
+        const { error } = await supabase.from("students").delete().eq("id", id);
 
-    fetchStudents(); // reload list
-  }
+        if (error) return console.error(error);
 
-  return (
-    <main className="p-4 max-w-md mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Students</h1>
+        fetchStudents();
+    }
 
-      <button
-        onClick={() => setShowForm(true)}
-        className="bg-blue-500 text-white px-4 py-2 rounded-xl"
-      >
-        Add Student
-      </button>
+    // START EDIT
+    function handleEdit(student: Student) {
+        setName(student.name);
+        setPrice(student.price.toString());
+        setEditingId(student.id);
+        setShowForm(true);
+    }
 
-      {showForm && (
-        <div className="mt-4 p-4 border rounded-xl">
-          <input
-            type="text"
-            placeholder="Student name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full mb-2 p-2 border rounded"
-          />
+    return (
+        <main className="p-4 max-w-md mx-auto">
+        <h1 className="text-2xl font-bold mb-4">Students</h1>
 
-          <input
-            type="number"
-            placeholder="Price per class"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            className="w-full mb-2 p-2 border rounded"
-          />
+        <button
+            onClick={() => {
+            setShowForm(true);
+            setEditingId(null);
+            setName("");
+            setPrice("");
+            }}
+            className="bg-blue-500 text-white px-4 py-2 rounded-xl"
+        >
+            Add Student
+        </button>
 
-          <button
-            onClick={handleAddStudent}
-            className="bg-green-500 text-white px-4 py-2 rounded-xl w-full"
-          >
-            Save
-          </button>
+        {/* FORM */}
+        {showForm && (
+            <div className="mt-4 p-4 border rounded-xl">
+            <input
+                type="text"
+                placeholder="Student name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full mb-2 p-2 border rounded"
+            />
+
+            <input
+                type="number"
+                placeholder="Price per class"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                className="w-full mb-2 p-2 border rounded"
+            />
+
+            <button
+                onClick={handleSaveStudent}
+                className="bg-green-500 text-white px-4 py-2 rounded-xl w-full"
+            >
+                {editingId ? "Update" : "Save"}
+            </button>
+            </div>
+        )}
+
+        {/* LIST */}
+        <div className="mt-6 space-y-2">
+            {students.map((student) => (
+            <div
+                key={student.id}
+                className="p-3 border rounded-xl flex justify-between items-center"
+            >
+                <div>
+                <p>{student.name}</p>
+                <p className="text-sm text-gray-500">{student.price}฿</p>
+                </div>
+
+                <div className="flex gap-2">
+                <button
+                    onClick={() => handleEdit(student)}
+                    className="text-blue-500"
+                >
+                    Edit
+                </button>
+
+                <button
+                    onClick={() => handleDelete(student.id)}
+                    className="text-red-500"
+                >
+                    Delete
+                </button>
+                </div>
+            </div>
+            ))}
         </div>
-      )}
 
-      <div className="mt-6 space-y-2">
-        {students.map((student) => (
-          <div
-            key={student.id}
-            className="p-3 border rounded-xl flex justify-between"
-          >
-            <span>{student.name}</span>
-            <span>{student.price}฿</span>
-          </div>
-        ))}
-      </div>
-
-      {students.length === 0 && (
-        <p className="text-gray-500 mt-4">No students yet</p>
-      )}
-    </main>
-  );
+        {students.length === 0 && (
+            <p className="text-gray-500 mt-4">No students yet</p>
+        )}
+        </main>
+    );
 }
