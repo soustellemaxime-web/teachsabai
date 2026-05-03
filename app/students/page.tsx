@@ -3,8 +3,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import type { Student } from "../lib/types";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function StudentsPage() {
+    const router = useRouter();
     const [user, setUser] = useState<any>(null);
     const [students, setStudents] = useState<Student[]>([]);
     const [showForm, setShowForm] = useState(false);
@@ -15,28 +18,30 @@ export default function StudentsPage() {
     const [editingId, setEditingId] = useState<string | null>(null);
     useEffect(() => {
         supabase.auth.getUser().then(({ data }) => {
-            console.log("INITIAL USER:", data.user);
-            setUser(data.user);
+            if (!data.user) {
+                router.push("/login");
+            } else {
+                setUser(data.user);
+            }
         });
-
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((_event, session) => {
-            console.log("AUTH CHANGE:", session?.user);
-            setUser(session?.user ?? null);
+            if (!session?.user) {
+                router.push("/login");
+            } else {
+                setUser(session.user);
+            }
         });
-
         return () => subscription.unsubscribe();
     }, []);
     // FETCH
     async function fetchStudents() {
         const { data, error } = await supabase.from("students").select("*");
-
         if (error) {
         console.error(error);
         return;
         }
-
         setStudents(data);
     }
 
@@ -47,7 +52,6 @@ export default function StudentsPage() {
     // ADD or UPDATE
     async function handleSaveStudent() {
         if (!name || !price) return;
-
         if (editingId) {
         // UPDATE
         const { error } = await supabase
@@ -57,7 +61,6 @@ export default function StudentsPage() {
             price: Number(price),
             })
             .eq("id", editingId);
-
         if (error) return console.error(error);
         } else {
         // INSERT
@@ -88,9 +91,7 @@ export default function StudentsPage() {
     // DELETE
     async function handleDelete(id: string) {
         const { error } = await supabase.from("students").delete().eq("id", id);
-
         if (error) return console.error(error);
-
         fetchStudents();
     }
 
@@ -105,7 +106,6 @@ export default function StudentsPage() {
     return (
         <main className="p-4 max-w-md mx-auto">
         <h1 className="text-2xl font-bold mb-4">Students</h1>
-
         <button
             onClick={() => {
             setShowForm(true);
@@ -128,7 +128,6 @@ export default function StudentsPage() {
                 onChange={(e) => setName(e.target.value)}
                 className="w-full mb-2 p-2 border rounded"
             />
-
             <input
                 type="number"
                 placeholder="Price per class"
@@ -136,7 +135,6 @@ export default function StudentsPage() {
                 onChange={(e) => setPrice(e.target.value)}
                 className="w-full mb-2 p-2 border rounded"
             />
-
             <button
                 onClick={handleSaveStudent}
                 className="bg-green-500 text-white px-4 py-2 rounded-xl w-full"
@@ -149,34 +147,37 @@ export default function StudentsPage() {
         {/* LIST */}
         <div className="mt-6 space-y-2">
             {students.map((student) => (
-            <div
-                key={student.id}
-                className="p-3 border rounded-xl flex justify-between items-center"
-            >
-                <div>
-                <p>{student.name}</p>
-                <p className="text-sm text-gray-500">{student.price}฿</p>
-                </div>
+                <Link key={student.id} href={`/students/${student.id}`}>
+                    <div className="p-3 border rounded-xl flex justify-between items-center">
+                    <div>
+                        <p>{student.name}</p>
+                        <p className="text-sm text-gray-500">{student.price}฿</p>
+                    </div>
+                    <div className="flex gap-2">
+                        <button
+                        onClick={(e) => {
+                            e.preventDefault();
+                            handleEdit(student);
+                        }}
+                        className="text-blue-500"
+                        >
+                        Edit
+                        </button>
 
-                <div className="flex gap-2">
-                <button
-                    onClick={() => handleEdit(student)}
-                    className="text-blue-500"
-                >
-                    Edit
-                </button>
-
-                <button
-                    onClick={() => handleDelete(student.id)}
-                    className="text-red-500"
-                >
-                    Delete
-                </button>
-                </div>
-            </div>
+                        <button
+                        onClick={(e) => {
+                            e.preventDefault();
+                            handleDelete(student.id);
+                        }}
+                        className="text-red-500"
+                        >
+                        Delete
+                        </button>
+                    </div>
+                    </div>
+                </Link>
             ))}
         </div>
-
         {students.length === 0 && (
             <p className="text-gray-500 mt-4">No students yet</p>
         )}
