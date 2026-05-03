@@ -1,17 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "../../../lib/supabase";
-import { useParams } from "next/navigation";
-import { QRCodeCanvas } from "qrcode.react";
+import { supabase } from "../../lib/supabase";
+import { useParams, useSearchParams } from "next/navigation";
 
-export default function InvoicePage() {
+export default function PublicInvoicePage() {
     const { id } = useParams();
+    const searchParams = useSearchParams();
+    const from = searchParams.get("from");
     const [student, setStudent] = useState<any>(null);
     const [classes, setClasses] = useState<any[]>([]);
-    const [startDate, setStartDate] = useState("");
-    const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-    const invoiceUrl = `${baseUrl}/invoice/${id}?from=${startDate}`;
+
     // fetch student
     async function fetchStudent() {
         const { data } = await supabase
@@ -19,17 +18,20 @@ export default function InvoicePage() {
         .select("*")
         .eq("id", id)
         .single();
+
         setStudent(data);
     }
-    // fetch classes after date
+
+    // fetch classes
     async function fetchClasses() {
-        if (!startDate) return;
+        if (!from) return;
+
         const { data, error } = await supabase
         .from("classes")
         .select("*")
         .eq("student_id", id)
-        .gte("date", startDate)
-        .order("date", { ascending: true });
+        .gte("date", from)
+        .lt("date", new Date().toISOString()); // only past classes
         if (error) return console.error(error);
         setClasses(data || []);
     }
@@ -38,7 +40,7 @@ export default function InvoicePage() {
     }, [id]);
     useEffect(() => {
         fetchClasses();
-    }, [startDate]);
+    }, [from]);
     // calculations
     const totalMinutes = classes.reduce(
         (sum, c) => sum + (c.duration || 0),
@@ -52,7 +54,6 @@ export default function InvoicePage() {
         <h1 className="text-2xl font-bold mb-4">
             Invoice
         </h1>
-        {/* STUDENT */}
         {student && (
             <div className="mb-4">
             <p className="font-medium">{student.name}</p>
@@ -61,47 +62,13 @@ export default function InvoicePage() {
             </p>
             </div>
         )}
-        {/* DATE PICKER */}
-        <div className="mb-4">
-            <label className="text-sm text-gray-500">
-            From date
-            </label>
-            <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="w-full p-2 border rounded"
-            />
-        </div>
-        {/* SUMMARY */}
-        {classes.length > 0 && (
-            <div className="p-4 border rounded-xl">
+        <div className="p-4 border rounded-xl">
             <p>Total classes: {classes.length}</p>
             <p>Total hours: {totalHours.toFixed(2)}</p>
             <p className="font-bold mt-2">
-                Total: {totalAmount.toFixed(0)}฿
+            Total: {totalAmount.toFixed(0)}฿
             </p>
-            </div>
-        )}
-        {/* QR */}
-        {startDate && classes.length > 0 && (
-            <div className="mt-6 p-4 border rounded-xl text-center">
-                <p className="mb-2 font-medium">Scan to view invoice</p>
-                <div className="flex justify-center">
-                <QRCodeCanvas value={invoiceUrl} size={180} />
-                </div>
-                <p className="text-xs text-gray-400 mt-2 break-all">
-                {invoiceUrl}
-                </p>
-            </div>
-        )}
-        <button
-            onClick={() => navigator.clipboard.writeText(invoiceUrl)}
-            className="mt-2 text-blue-500 text-sm"
-            >
-            Copy link
-        </button>
-        {/* CLASS LIST */}
+        </div>
         <div className="mt-4 space-y-2">
             {classes.map((c) => {
             const price =
@@ -121,7 +88,7 @@ export default function InvoicePage() {
             );
             })}
         </div>
-        {startDate && classes.length === 0 && (
+        {classes.length === 0 && (
             <p className="text-gray-400 mt-4">
             No classes found
             </p>
