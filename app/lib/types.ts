@@ -1,5 +1,5 @@
 export type Student = {
   id: string;
   name: string;
-  price: number;
+  hourly_rate: number;
 };

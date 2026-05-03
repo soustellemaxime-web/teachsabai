@@ -1,0 +1,110 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { supabase } from "../../../lib/supabase";
+import { useParams } from "next/navigation";
+
+export default function InvoicePage() {
+  const { id } = useParams();
+  const [student, setStudent] = useState<any>(null);
+  const [classes, setClasses] = useState<any[]>([]);
+  const [startDate, setStartDate] = useState("");
+  // fetch student
+  async function fetchStudent() {
+    const { data } = await supabase
+      .from("students")
+      .select("*")
+      .eq("id", id)
+      .single();
+    setStudent(data);
+  }
+  // fetch classes after date
+  async function fetchClasses() {
+    if (!startDate) return;
+    const { data, error } = await supabase
+      .from("classes")
+      .select("*")
+      .eq("student_id", id)
+      .gte("date", startDate)
+      .order("date", { ascending: true });
+    if (error) return console.error(error);
+    setClasses(data || []);
+  }
+  useEffect(() => {
+    fetchStudent();
+  }, [id]);
+  useEffect(() => {
+    fetchClasses();
+  }, [startDate]);
+  // calculations
+  const totalMinutes = classes.reduce(
+    (sum, c) => sum + (c.duration || 0),
+    0
+  );
+  const totalHours = totalMinutes / 60;
+  const totalAmount =
+    totalHours * (student?.hourly_rate || 0);
+  return (
+    <main className="p-4 max-w-md mx-auto">
+      <h1 className="text-2xl font-bold mb-4">
+        Invoice
+      </h1>
+      {/* STUDENT */}
+      {student && (
+        <div className="mb-4">
+          <p className="font-medium">{student.name}</p>
+          <p className="text-sm text-gray-500">
+            {student.hourly_rate}฿ / hour
+          </p>
+        </div>
+      )}
+      {/* DATE PICKER */}
+      <div className="mb-4">
+        <label className="text-sm text-gray-500">
+          From date
+        </label>
+        <input
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+      {/* SUMMARY */}
+      {classes.length > 0 && (
+        <div className="p-4 border rounded-xl">
+          <p>Total classes: {classes.length}</p>
+          <p>Total hours: {totalHours.toFixed(2)}</p>
+          <p className="font-bold mt-2">
+            Total: {totalAmount.toFixed(0)}฿
+          </p>
+        </div>
+      )}
+      {/* CLASS LIST */}
+      <div className="mt-4 space-y-2">
+        {classes.map((c) => {
+          const price =
+            (c.duration / 60) * student.hourly_rate;
+          return (
+            <div
+              key={c.id}
+              className="p-3 border rounded-xl"
+            >
+              <p>
+                {new Date(c.date).toLocaleString()}
+              </p>
+              <p className="text-sm text-gray-500">
+                {c.duration} min • {price}฿
+              </p>
+            </div>
+          );
+        })}
+      </div>
+      {startDate && classes.length === 0 && (
+        <p className="text-gray-400 mt-4">
+          No classes found
+        </p>
+      )}
+    </main>
+  );
+}

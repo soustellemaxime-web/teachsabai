@@ -13,7 +13,7 @@ export default function StudentsPage() {
     const [showForm, setShowForm] = useState(false);
 
     const [name, setName] = useState("");
-    const [price, setPrice] = useState("");
+    const [hourly_rate, setHourly_rate] = useState("");
 
     const [editingId, setEditingId] = useState<string | null>(null);
     useEffect(() => {
@@ -51,14 +51,14 @@ export default function StudentsPage() {
 
     // ADD or UPDATE
     async function handleSaveStudent() {
-        if (!name || !price) return;
+        if (!name || !hourly_rate) return;
         if (editingId) {
         // UPDATE
         const { error } = await supabase
             .from("students")
             .update({
             name,
-            price: Number(price),
+            hourly_rate: Number(hourly_rate),
             })
             .eq("id", editingId);
         if (error) return console.error(error);
@@ -72,7 +72,7 @@ export default function StudentsPage() {
             const { error } = await supabase.from("students").insert([
                 {
                 name,
-                    price: Number(price),
+                    hourly_rate: Number(hourly_rate),
                     teacher_id: user?.id,
                 },
             ]);
@@ -81,7 +81,7 @@ export default function StudentsPage() {
 
         // reset
         setName("");
-        setPrice("");
+        setHourly_rate("");
         setEditingId(null);
         setShowForm(false);
 
@@ -98,7 +98,7 @@ export default function StudentsPage() {
     // START EDIT
     function handleEdit(student: Student) {
         setName(student.name);
-        setPrice(student.price.toString());
+        setHourly_rate(student.hourly_rate.toString());
         setEditingId(student.id);
         setShowForm(true);
     }
@@ -111,7 +111,7 @@ export default function StudentsPage() {
             setShowForm(true);
             setEditingId(null);
             setName("");
-            setPrice("");
+            setHourly_rate("");
             }}
             className="bg-blue-500 text-white px-4 py-2 rounded-xl"
         >
@@ -130,9 +130,9 @@ export default function StudentsPage() {
             />
             <input
                 type="number"
-                placeholder="Price per class"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
+                placeholder="Price per hour"
+                value={hourly_rate}
+                onChange={(e) => setHourly_rate(e.target.value)}
                 className="w-full mb-2 p-2 border rounded"
             />
             <button
@@ -151,7 +151,7 @@ export default function StudentsPage() {
                     <div className="p-3 border rounded-xl flex justify-between items-center">
                     <div>
                         <p>{student.name}</p>
-                        <p className="text-sm text-gray-500">{student.price}฿</p>
+                        <p className="text-sm text-gray-500">{student.hourly_rate}฿ / hour</p>
                     </div>
                     <div className="flex gap-2">
                         <button
