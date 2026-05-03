@@ -36,6 +36,7 @@ export default function Header() {
         {user ? (
           <>
             <Link href="/students">Students</Link>
+            <Link href="/schedule">Schedule</Link>
 
             <span className="text-sm text-gray-500">
               {user.email}

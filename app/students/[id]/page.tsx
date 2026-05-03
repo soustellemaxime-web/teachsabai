@@ -9,7 +9,6 @@ export default function StudentPage() {
   const [student, setStudent] = useState<any>(null);
   const [classes, setClasses] = useState<any[]>([]);
   const [date, setDate] = useState("");
-  const [status, setStatus] = useState("planned");
   const [user, setUser] = useState<any>(null);
 
   // Get user
@@ -51,28 +50,21 @@ export default function StudentPage() {
   // Add class
   async function handleAddClass() {
     if (!date || !user) return;
-
     const { error } = await supabase.from("classes").insert([
       {
         student_id: id,
         teacher_id: user.id,
         date,
-        status,
       },
     ]);
-
     if (error) return console.error(error);
-
-    setDate("");
-    setStatus("planned");
-
+    setDate("")
     fetchClasses();
   }
 
   if (!student) {
     return <p className="p-4">Loading...</p>;
   }
-
   return (
     <main className="p-4 max-w-md mx-auto">
       {/* STUDENT INFO */}
@@ -89,16 +81,6 @@ export default function StudentPage() {
           onChange={(e) => setDate(e.target.value)}
           className="w-full mb-2 p-2 border rounded"
         />
-
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className="w-full mb-2 p-2 border rounded"
-        >
-          <option value="planned">Planned</option>
-          <option value="done">Done</option>
-        </select>
-
         <button
           onClick={handleAddClass}
           className="bg-green-500 text-white px-4 py-2 rounded-xl w-full"
@@ -109,19 +91,23 @@ export default function StudentPage() {
 
       {/* CLASSES LIST */}
       <div className="mt-6 space-y-2">
-        {classes.map((c) => (
-          <div
-            key={c.id}
-            className="p-3 border rounded-xl flex justify-between"
-          >
-            <div>
-              <p>{new Date(c.date).toLocaleString()}</p>
-              <p className="text-sm text-gray-500">{c.status}</p>
-            </div>
-          </div>
-        ))}
+        {classes.map((c) => {
+            const isPast = new Date(c.date) < new Date();
+            return (
+                <div
+                key={c.id}
+                className="p-3 border rounded-xl flex justify-between"
+                >
+                <div>
+                    <p>{new Date(c.date).toLocaleString()}</p>
+                    <p className="text-sm text-gray-500">
+                    {isPast ? "Done" : "Planned"}
+                    </p>
+                </div>
+                </div>
+            );
+            })}
       </div>
-
       {classes.length === 0 && (
         <p className="text-gray-500 mt-4">No classes yet</p>
       )}
