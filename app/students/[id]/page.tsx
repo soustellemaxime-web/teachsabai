@@ -17,6 +17,7 @@ export default function StudentPage() {
     const [date, setDate] = useState<Date | null>(null);
     const [user, setUser] = useState<any>(null);
     const [editingClass, setEditingClass] = useState<any>(null);
+    const [selectedMonth, setSelectedMonth] = useState(new Date());
 
     // Get user
     useEffect(() => {
@@ -131,6 +132,15 @@ export default function StudentPage() {
         if (error) return console.error(error);
         fetchClasses();
     }
+
+    // Month filter
+    const filteredClasses = classes.filter((c) => {
+        const d = new Date(c.date);
+        return (
+            d.getMonth() === selectedMonth.getMonth() &&
+            d.getFullYear() === selectedMonth.getFullYear()
+        );
+    });
     return (
         <main className="p-4 max-w-md mx-auto">
         {/* STUDENT INFO */}
@@ -196,10 +206,49 @@ export default function StudentPage() {
                 {editingClass ? "Edit Class" : "Add Class"}
             </button>
         </div>
-
+        {/* Month tab*/}
+        <div className="flex items-center justify-between mt-6">
+            <button
+                onClick={() =>
+                setSelectedMonth(
+                    new Date(
+                    selectedMonth.getFullYear(),
+                    selectedMonth.getMonth() - 1
+                    )
+                )
+                }
+                className="text-sm text-gray-500"
+            >
+                ←
+            </button>
+            <p className="font-medium">
+                {selectedMonth.toLocaleString("en-GB", {
+                month: "long",
+                year: "numeric",
+                })}
+            </p>
+            <button
+                onClick={() =>
+                setSelectedMonth(
+                    new Date(
+                    selectedMonth.getFullYear(),
+                    selectedMonth.getMonth() + 1
+                    )
+                )
+                }
+                className="text-sm text-gray-500"
+            >
+                →
+            </button>
+        </div>
         {/* CLASSES LIST */}
         <div className="mt-6 space-y-2">
-            {classes.map((c) => {
+            {filteredClasses.length === 0 && (
+                <p className="text-gray-400 mt-4">
+                    No classes this month
+                </p>
+            )}
+            {filteredClasses.map((c) => {
                 const isPast = new Date(c.date) < new Date();
                 const price = student.pricing_type === "hourly" ? ((c.duration || 0) / 60) * (student.hourly_rate || 0) : 0;
                 return (
