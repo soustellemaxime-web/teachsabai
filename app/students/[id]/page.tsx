@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Pencil, Trash2 } from "lucide-react";
 import DatePicker from "react-datepicker";
+import Button from "../../components/Button"
 import "react-datepicker/dist/react-datepicker.css";
 
 export default function StudentPage() {
@@ -206,13 +207,22 @@ export default function StudentPage() {
                         <div className="flex justify-between items-start">  
                             {/* LEFT */}
                             <div>
-                            <p>{new Date(c.date).toLocaleString()}</p>
+                            {new Date(c.date).toLocaleString("en-GB", {
+                                weekday: "short",
+                                day: "2-digit",
+                                month: "short",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: false,
+                            })}
                             <p className="text-sm text-gray-500">
                                 {c.duration} min
                                 {student.pricing_type === "hourly" && ` • ${price}฿`}
                             </p>
                             <p className="text-sm text-gray-400">
-                                {isPast ? "Done" : "Planned"}
+                                <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
+                                    {isPast ? "Done" : "Planned"}
+                                </span>
                             </p>
                             </div>
                             {/* RIGHT ACTIONS */}
@@ -232,16 +242,27 @@ export default function StudentPage() {
                             </div>
                         </div>
                         {/* PAID BUTTON */}
-                        {student.pricing_type === "hourly" && (
-                            <button
+                        {student.pricing_type === "hourly" && !c.is_paid && (
+                            <Button
                                 onClick={() => togglePaid(c)}
-                                className={`text-sm mt-2 ${
-                                c.is_paid ? "text-green-600" : "text-gray-500"
-                                }`}
                             >
                                 {c.is_paid ? "Paid" : "Mark paid"}
-                            </button>
+                            </Button>
                         )}
+                        <div className="flex items-center gap-2 mt-1">
+                            <span
+                                className={`w-2 h-2 rounded-full ${
+                                c.is_paid ? "bg-green-500" : "bg-red-500"
+                                }`}
+                            />
+                            <span
+                                className={`text-sm font-medium ${
+                                c.is_paid ? "text-green-600" : "text-red-500"
+                                }`}
+                            >
+                                {c.is_paid ? "Paid" : "Unpaid"}
+                            </span>
+                        </div>
                         </div>
                 );
             })}
