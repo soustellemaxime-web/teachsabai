@@ -77,6 +77,16 @@ export default function StudentPage() {
         fetchClasses();
     }
 
+    // Mark a class as paid
+    async function togglePaid(c: any) {
+        const { error } = await supabase
+            .from("classes")
+            .update({ is_paid: !c.is_paid })
+            .eq("id", c.id);
+        if (error) return console.error(error);
+        fetchClasses();
+    }
+
     if (!student) {
         return <p className="p-4">Loading...</p>;
     }
@@ -133,6 +143,14 @@ export default function StudentPage() {
                     <p className="text-sm text-gray-400">
                         {isPast ? "Done" : "Planned"}
                     </p>
+                    <button
+                        onClick={() => togglePaid(c)}
+                        className={`text-sm ${
+                            c.is_paid ? "text-green-600" : "text-gray-500"
+                        }`}
+                        >
+                        {c.is_paid ? "Paid" : "Mark paid"}
+                    </button>
                     </div>
                 );
             })}

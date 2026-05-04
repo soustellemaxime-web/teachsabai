@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 import { useParams } from "next/navigation";
 import { QRCodeCanvas } from "qrcode.react";
+import Card from "../../../components/Card";
+import Button from "../../../components/Button";
 
 export default function InvoicePage() {
     const { id } = useParams();
@@ -28,17 +30,55 @@ export default function InvoicePage() {
         .from("classes")
         .select("*")
         .eq("student_id", id)
+        .eq("is_paid", false)
         .gte("date", startDate)
         .order("date", { ascending: true });
         if (error) return console.error(error);
         setClasses(data || []);
     }
+    // Save invoice to db
+    async function saveInvoice() {
+        const { data: { user }, } = await supabase.auth.getUser();
+        if (!student || classes.length === 0 || !user) return;
+        const { data: invoice, error } = await supabase
+            .from("invoices")
+            .insert([
+            {
+                student_id: id,
+                teacher_id: user.id,
+                from_date: startDate,
+                to_date: new Date().toISOString(),
+                total_amount: totalAmount,
+            },
+            ])
+            .select()
+            .single();
+        if (error) return console.error(error);
+        await supabase
+            .from("classes")
+            .update({ invoice_id: invoice.id })
+            .in(
+            "id",
+            classes.map((c) => c.id)
+            );
+
+        alert("Invoice saved!");
+    }
+    // Invoice paid
+    async function markAsPaid() {
+        const { error } = await supabase
+            .from("classes")
+            .update({ is_paid: true })
+            .in(
+            "id",
+            classes.map((c) => c.id)
+            );
+        if (error) return console.error(error);
+        alert("Marked as paid");
+    }
     useEffect(() => {
         fetchStudent();
     }, [id]);
-    useEffect(() => {
-        fetchClasses();
-    }, [startDate]);
     // calculations
     const totalMinutes = classes.reduce(
         (sum, c) => sum + (c.duration || 0),
@@ -48,7 +88,7 @@ export default function InvoicePage() {
     const totalAmount =
         totalHours * (student?.hourly_rate || 0);
     return (
-        <main className="p-4 max-w-md mx-auto">
+        <main className="p-4 max-w-md mx-auto space-y-4">
         <h1 className="text-2xl font-bold mb-4">
             Invoice
         </h1>
@@ -73,43 +113,49 @@ export default function InvoicePage() {
             className="w-full p-2 border rounded"
             />
         </div>
+        <Button
+            onClick={fetchClasses}
+            >
+            Generate Invoice
+        </Button>
         {/* SUMMARY */}
         {classes.length > 0 && (
-            <div className="p-4 border rounded-xl">
-            <p>Total classes: {classes.length}</p>
-            <p>Total hours: {totalHours.toFixed(2)}</p>
-            <p className="font-bold mt-2">
-                Total: {totalAmount.toFixed(0)}฿
-            </p>
-            </div>
+            <Card>
+                <p className="text-sm text-gray-500">
+                    {classes.length} classes • {totalHours.toFixed(2)}h
+                </p>
+                <p className="text-2xl font-bold mt-1">
+                    {totalAmount.toFixed(0)}฿
+                </p>
+            </Card>
         )}
         {/* QR */}
         {startDate && classes.length > 0 && (
-            <div className="mt-6 p-4 border rounded-xl text-center">
-                <p className="mb-2 font-medium">Scan to view invoice</p>
+            <Card>
+                <p className="mb-2 font-medium text-center">Scan to view invoice</p>
                 <div className="flex justify-center">
-                <QRCodeCanvas value={invoiceUrl} size={180} />
+                    <QRCodeCanvas value={invoiceUrl} size={180} />
                 </div>
-                <p className="text-xs text-gray-400 mt-2 break-all">
-                {invoiceUrl}
+                <p className="text-xs text-gray-400 mt-2 break-all text-center">
+                    {invoiceUrl}
                 </p>
-            </div>
+            </Card>
         )}
-        <button
-            onClick={() => navigator.clipboard.writeText(invoiceUrl)}
-            className="mt-2 text-blue-500 text-sm"
-            >
-            Copy link
-        </button>
+        {classes.length > 0 && (
+            <Button
+                onClick={() => navigator.clipboard.writeText(invoiceUrl)}
+                >
+                Copy link
+            </Button>
+        )}
         {/* CLASS LIST */}
         <div className="mt-4 space-y-2">
             {classes.map((c) => {
             const price =
                 (c.duration / 60) * student.hourly_rate;
             return (
-                <div
+                <Card
                 key={c.id}
-                className="p-3 border rounded-xl"
                 >
                 <p>
                     {new Date(c.date).toLocaleString()}
@@ -117,13 +163,23 @@ export default function InvoicePage() {
                 <p className="text-sm text-gray-500">
                     {c.duration} min • {price}฿
                 </p>
-                </div>
+                </Card>
             );
             })}
         </div>
+        {classes.length > 0 && (
+            <Button onClick={saveInvoice}>
+                Save Invoice
+            </Button>
+        )}
+        {startDate && classes.length > 0 && (
+            <Button onClick={markAsPaid}>
+                Mark as Paid
+            </Button>
+        )}
         {startDate && classes.length === 0 && (
             <p className="text-gray-400 mt-4">
-            No classes found
+                No classes found
             </p>
         )}
         </main>

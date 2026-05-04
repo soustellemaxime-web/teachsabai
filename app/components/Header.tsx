@@ -37,6 +37,7 @@ export default function Header() {
           <>
             <Link href="/students">Students</Link>
             <Link href="/schedule">Schedule</Link>
+            <Link href="/invoices">Invoices</Link>
 
             <span className="text-sm text-gray-500">
               {user.email}

@@ -5,6 +5,9 @@ import { supabase } from "../lib/supabase";
 import type { Student } from "../lib/types";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Card from "../components/Card";
+import Button from "../components/Button";
+import { User, Pencil, Trash2, Plus } from "lucide-react";
 
 export default function StudentsPage() {
     const router = useRouter();
@@ -104,83 +107,99 @@ export default function StudentsPage() {
     }
 
     return (
-        <main className="p-4 max-w-md mx-auto">
-        <h1 className="text-2xl font-bold mb-4">Students</h1>
-        <button
-            onClick={() => {
-            setShowForm(true);
-            setEditingId(null);
-            setName("");
-            setHourly_rate("");
-            }}
-            className="bg-blue-500 text-white px-4 py-2 rounded-xl"
-        >
-            Add Student
-        </button>
-
-        {/* FORM */}
-        {showForm && (
-            <div className="mt-4 p-4 border rounded-xl">
-            <input
-                type="text"
-                placeholder="Student name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full mb-2 p-2 border rounded"
-            />
-            <input
-                type="number"
-                placeholder="Price per hour"
-                value={hourly_rate}
-                onChange={(e) => setHourly_rate(e.target.value)}
-                className="w-full mb-2 p-2 border rounded"
-            />
-            <button
-                onClick={handleSaveStudent}
-                className="bg-green-500 text-white px-4 py-2 rounded-xl w-full"
-            >
-                {editingId ? "Update" : "Save"}
-            </button>
+        <main className="p-6 max-w-md mx-auto space-y-6">
+            {/* HEADER */}
+            <div className="flex flex-col items-center gap-3">
+                <h1 className="text-2xl font-bold">Students</h1>
+                <button
+                    onClick={() => {
+                    setShowForm(true);
+                    setEditingId(null);
+                    setName("");
+                    setHourly_rate("");
+                    }}
+                    className="flex items-center gap-2 border px-4 py-2 rounded-xl hover:bg-gray-100"
+                >
+                        <Plus size={18} className="text-green-600" />
+                        Add student
+                </button>
             </div>
-        )}
+            {/* FORM */}
+            {showForm && (
+            <Card>
+                <div className="space-y-2">
+                <input
+                    type="text"
+                    placeholder="Student name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full p-2 border rounded-lg"
+                />
 
-        {/* LIST */}
-        <div className="mt-6 space-y-2">
+                <input
+                    type="number"
+                    placeholder="Price per hour"
+                    value={hourly_rate}
+                    onChange={(e) => setHourly_rate(e.target.value)}
+                    className="w-full p-2 border rounded-lg"
+                />
+
+                <Button onClick={handleSaveStudent}>
+                    {editingId ? "Update" : "Save"}
+                </Button>
+                </div>
+            </Card>
+            )}
+
+            {/* LIST */}
+            <div className="grid grid-cols-2 gap-4">
             {students.map((student) => (
                 <Link key={student.id} href={`/students/${student.id}`}>
-                    <div className="p-3 border rounded-xl flex justify-between items-center">
-                    <div>
-                        <p>{student.name}</p>
-                        <p className="text-sm text-gray-500">{student.hourly_rate}฿ / hour</p>
-                    </div>
-                    <div className="flex gap-2">
-                        <button
-                        onClick={(e) => {
-                            e.preventDefault();
-                            handleEdit(student);
-                        }}
-                        className="text-blue-500"
-                        >
-                        Edit
-                        </button>
+                    <Card>
+                        <div className="flex flex-col gap-2">
+                            {/* TOP ROW */}
+                            <div className="flex justify-between items-start">
+                            <User size={28} className="text-gray-600" />
+                            <div className="flex gap-2 text-xs">
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        handleEdit(student);
+                                    }}
+                                    className="text-blue-500"
+                                    >
+                                    <Pencil size={18} className="text-blue-500" />
+                                </button>
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        handleDelete(student.id);
+                                    }}
+                                    className="text-red-500"
+                                    >
+                                    <Trash2 size={18} className="text-red-500" />
+                                </button>
+                            </div>
+                            </div>
+                            {/* INFO */}
+                            <div>
+                            <p className="font-semibold">{student.name}</p>
+                            <p className="text-sm text-gray-500">
+                                {student.hourly_rate}฿ / hour
+                            </p>
+                            </div>
 
-                        <button
-                        onClick={(e) => {
-                            e.preventDefault();
-                            handleDelete(student.id);
-                        }}
-                        className="text-red-500"
-                        >
-                        Delete
-                        </button>
-                    </div>
-                    </div>
+                        </div>
+                    </Card>
                 </Link>
             ))}
-        </div>
-        {students.length === 0 && (
-            <p className="text-gray-500 mt-4">No students yet</p>
-        )}
+            </div>
+
+            {students.length === 0 && (
+            <p className="text-gray-400 text-center mt-4">
+                No students yet
+            </p>
+            )}
         </main>
-    );
+        );
 }
