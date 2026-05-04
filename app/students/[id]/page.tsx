@@ -29,7 +29,6 @@ export default function StudentPage() {
         .select("*")
         .eq("id", id)
         .single();
-
         setStudent(data);
     }
 
@@ -43,6 +42,7 @@ export default function StudentPage() {
 
         setClasses(data || []);
     }
+
     // Edit handler
     function handleEditClass(c: any) {
         setEditingClass(c);
@@ -56,6 +56,15 @@ export default function StudentPage() {
         fetchClasses();
         }
     }, [id]);
+
+    if (!student) {
+        return <p className="p-4">Loading...</p>;
+    }
+    const total = student.course_total_classes || 0;
+    const used = classes.length;
+    const remaining = total - used;
+    const progress = total > 0 ? (used / total) * 100 : 0;
+    const barColor = progress < 70 ? "bg-blue-500" : progress < 100 ? "bg-orange-400" : "bg-green-500";
 
     // Add class
     async function handleAddClass() {
@@ -119,15 +128,39 @@ export default function StudentPage() {
         if (error) return console.error(error);
         fetchClasses();
     }
-
-    if (!student) {
-        return <p className="p-4">Loading...</p>;
-    }
     return (
         <main className="p-4 max-w-md mx-auto">
         {/* STUDENT INFO */}
         <h1 className="text-2xl font-bold">{student.name}</h1>
-        <p className="text-gray-500">{student.hourly_rate}฿ / hour</p>
+        {student.pricing_type === "hourly" ? (
+            <p className="text-gray-500">
+                {student.hourly_rate}฿ / hour
+            </p>
+            ) : (
+            <p className="text-gray-500">
+                {student.course_total_classes} classes • {student.course_price}฿
+            </p>
+        )}
+        {student.pricing_type === "course" && (
+            <div className="mt-4 space-y-2">
+                {/* TEXT */}
+                <p className="text-sm text-gray-600">
+                {used} / {total} classes used
+                </p>
+                {/* BAR BACKGROUND */}
+                <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                {/* PROGRESS */}
+                <div
+                    className={`h-full ${barColor} transition-all`}
+                    style={{ width: `${progress}%` }}
+                />
+                </div>
+                {/* REMAINING */}
+                <p className="text-sm text-black-500">
+                {remaining} classes remaining
+                </p>
+            </div>
+        )}
 
         {/* Get invoice */}
         <Link
@@ -153,13 +186,8 @@ export default function StudentPage() {
                 onChange={(e) => setDuration(e.target.value)}
                 className="w-full mb-2 p-2 border rounded"
             />
-            <button
-            onClick={handleAddClass}
-            className="bg-green-500 text-white px-4 py-2 rounded-xl w-full"
-            >
-            <h2 className="font-semibold mb-2">
+            <button onClick={handleAddClass} className="bg-green-500 text-white px-4 py-2 rounded-xl w-full">
                 {editingClass ? "Edit Class" : "Add Class"}
-            </h2>
             </button>
         </div>
 
@@ -167,8 +195,7 @@ export default function StudentPage() {
         <div className="mt-6 space-y-2">
             {classes.map((c) => {
                 const isPast = new Date(c.date) < new Date();
-                const price =
-                    ((c.duration || 0) / 60) * (student.hourly_rate || 0);
+                const price = student.pricing_type === "hourly" ? ((c.duration || 0) / 60) * (student.hourly_rate || 0) : 0;
                 return (
                     <div key={c.id} className="p-3 border rounded-xl">
                         <div className="flex justify-between items-start">  
@@ -176,7 +203,8 @@ export default function StudentPage() {
                             <div>
                             <p>{new Date(c.date).toLocaleString()}</p>
                             <p className="text-sm text-gray-500">
-                                {c.duration} min • {price}฿
+                                {c.duration} min
+                                {student.pricing_type === "hourly" && ` • ${price}฿`}
                             </p>
                             <p className="text-sm text-gray-400">
                                 {isPast ? "Done" : "Planned"}
@@ -199,14 +227,16 @@ export default function StudentPage() {
                             </div>
                         </div>
                         {/* PAID BUTTON */}
-                        <button
-                            onClick={() => togglePaid(c)}
-                            className={`text-sm mt-2 ${
-                            c.is_paid ? "text-green-600" : "text-gray-500"
-                            }`}
-                        >
-                            {c.is_paid ? "Paid" : "Mark paid"}
-                        </button>
+                        {student.pricing_type === "hourly" && (
+                            <button
+                                onClick={() => togglePaid(c)}
+                                className={`text-sm mt-2 ${
+                                c.is_paid ? "text-green-600" : "text-gray-500"
+                                }`}
+                            >
+                                {c.is_paid ? "Paid" : "Mark paid"}
+                            </button>
+                        )}
                         </div>
                 );
             })}

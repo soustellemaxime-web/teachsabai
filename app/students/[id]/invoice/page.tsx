@@ -85,8 +85,7 @@ export default function InvoicePage() {
         0
     );
     const totalHours = totalMinutes / 60;
-    const totalAmount =
-        totalHours * (student?.hourly_rate || 0);
+    const totalAmount = student?.pricing_type === "hourly" ? totalHours * (student?.hourly_rate || 0) : 0;
     return (
         <main className="p-4 max-w-md mx-auto space-y-4">
         <h1 className="text-2xl font-bold mb-4">
@@ -96,9 +95,15 @@ export default function InvoicePage() {
         {student && (
             <div className="mb-4">
             <p className="font-medium">{student.name}</p>
-            <p className="text-sm text-gray-500">
-                {student.hourly_rate}฿ / hour
-            </p>
+            {student.pricing_type === "hourly" ? (
+                <p className="text-sm text-gray-500">
+                    {student.hourly_rate}฿ / hour
+                </p>
+                ) : (
+                <p className="text-sm text-gray-500">
+                    {student.course_total_classes} classes • {student.course_price}฿
+                </p>
+            )}
             </div>
         )}
         {/* DATE PICKER */}
@@ -124,9 +129,15 @@ export default function InvoicePage() {
                 <p className="text-sm text-gray-500">
                     {classes.length} classes • {totalHours.toFixed(2)}h
                 </p>
-                <p className="text-2xl font-bold mt-1">
-                    {totalAmount.toFixed(0)}฿
-                </p>
+                {student?.pricing_type === "hourly" ? (
+                    <p className="text-2xl font-bold mt-1">
+                        {totalAmount.toFixed(0)}฿
+                    </p>
+                    ) : (
+                    <p className="text-blue-500 font-medium mt-1">
+                        Covered by course package
+                    </p>
+                )}
             </Card>
         )}
         {/* QR */}
@@ -161,25 +172,34 @@ export default function InvoicePage() {
                     {new Date(c.date).toLocaleString()}
                 </p>
                 <p className="text-sm text-gray-500">
-                    {c.duration} min • {price}฿
+                    {c.duration} min
+                    {student.pricing_type === "hourly" && ` • ${price}฿`}
                 </p>
                 </Card>
             );
             })}
         </div>
-        {classes.length > 0 && (
-            <Button onClick={saveInvoice}>
+        {student?.pricing_type === "hourly" &&
+            classes.length > 0 && (
+                <Button onClick={saveInvoice}>
                 Save Invoice
-            </Button>
+                </Button>
         )}
-        {startDate && classes.length > 0 && (
-            <Button onClick={markAsPaid}>
+        {student?.pricing_type === "hourly" &&
+            startDate &&
+            classes.length > 0 && (
+                <Button onClick={markAsPaid}>
                 Mark as Paid
-            </Button>
+                </Button>
         )}
         {startDate && classes.length === 0 && (
             <p className="text-gray-400 mt-4">
                 No classes found
+            </p>
+        )}
+        {student?.pricing_type === "course" && classes.length > 0 && (
+            <p className="text-sm text-blue-500">
+                {classes.length} classes will be deducted from the course
             </p>
         )}
         </main>

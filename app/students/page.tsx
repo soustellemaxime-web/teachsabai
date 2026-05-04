@@ -14,10 +14,11 @@ export default function StudentsPage() {
     const [user, setUser] = useState<any>(null);
     const [students, setStudents] = useState<Student[]>([]);
     const [showForm, setShowForm] = useState(false);
-
     const [name, setName] = useState("");
     const [hourly_rate, setHourly_rate] = useState("");
-
+    const [pricingType, setPricingType] = useState("hourly");
+    const [courseClasses, setCourseClasses] = useState("");
+    const [coursePrice, setCoursePrice] = useState("");
     const [editingId, setEditingId] = useState<string | null>(null);
     useEffect(() => {
         supabase.auth.getUser().then(({ data }) => {
@@ -54,14 +55,28 @@ export default function StudentsPage() {
 
     // ADD or UPDATE
     async function handleSaveStudent() {
-        if (!name || !hourly_rate) return;
+        if (!name) return;
+        if (pricingType === "hourly" && !hourly_rate) return;
+        if (pricingType === "course" && (!courseClasses || !coursePrice)) return;
         if (editingId) {
         // UPDATE
         const { error } = await supabase
             .from("students")
             .update({
-            name,
-            hourly_rate: Number(hourly_rate),
+                name,
+                pricing_type: pricingType,
+                hourly_rate:
+                    pricingType === "hourly"
+                    ? Number(hourly_rate)
+                    : null,
+                course_total_classes:
+                    pricingType === "course"
+                    ? Number(courseClasses)
+                    : null,
+                course_price:
+                    pricingType === "course"
+                    ? Number(coursePrice)
+                    : null,
             })
             .eq("id", editingId);
         if (error) return console.error(error);
@@ -74,20 +89,30 @@ export default function StudentsPage() {
             }
             const { error } = await supabase.from("students").insert([
                 {
-                name,
-                    hourly_rate: Number(hourly_rate),
-                    teacher_id: user?.id,
+                    name,
+                    teacher_id: user.id,
+                    pricing_type: pricingType,
+                    hourly_rate:
+                    pricingType === "hourly"
+                        ? Number(hourly_rate)
+                        : null,
+                    course_total_classes:
+                    pricingType === "course"
+                        ? Number(courseClasses)
+                        : null,
+                    course_price:
+                    pricingType === "course"
+                        ? Number(coursePrice)
+                        : null,
                 },
             ]);
         if (error) return console.error(error);
         }
-
         // reset
         setName("");
         setHourly_rate("");
         setEditingId(null);
         setShowForm(false);
-
         fetchStudents();
     }
 
@@ -101,9 +126,12 @@ export default function StudentsPage() {
     // START EDIT
     function handleEdit(student: Student) {
         setName(student.name);
-        setHourly_rate(student.hourly_rate.toString());
+        setHourly_rate(student.hourly_rate.toString() || "");
         setEditingId(student.id);
         setShowForm(true);
+        setPricingType(student.pricing_type);
+        setCourseClasses(student.course_total_classes || "");
+        setCoursePrice(student.course_price || "");
     }
 
     return (
@@ -135,15 +163,53 @@ export default function StudentsPage() {
                     onChange={(e) => setName(e.target.value)}
                     className="w-full p-2 border rounded-lg"
                 />
-
-                <input
-                    type="number"
-                    placeholder="Price per hour"
-                    value={hourly_rate}
-                    onChange={(e) => setHourly_rate(e.target.value)}
-                    className="w-full p-2 border rounded-lg"
-                />
-
+                <div className="flex gap-4">
+                    <label>
+                        <input
+                        type="radio"
+                        value="hourly"
+                        checked={pricingType === "hourly"}
+                        onChange={() => setPricingType("hourly")}
+                        />
+                        Hourly
+                    </label>
+                    <label>
+                        <input
+                        type="radio"
+                        value="course"
+                        checked={pricingType === "course"}
+                        onChange={() => setPricingType("course")}
+                        />
+                        Course
+                    </label>
+                </div>
+                {pricingType === "hourly" && (
+                    <input
+                        type="number"
+                        placeholder="Price per hour"
+                        value={hourly_rate}
+                        onChange={(e) => setHourly_rate(e.target.value)}
+                        className="w-full p-2 border rounded-lg"
+                    />
+                )}
+                {pricingType === "course" && (
+                    <>
+                        <input
+                        type="number"
+                        placeholder="Total classes (e.g. 10)"
+                        value={courseClasses}
+                        onChange={(e) => setCourseClasses(e.target.value)}
+                        className="w-full p-2 border rounded-lg"
+                        />
+                        <input
+                        type="number"
+                        placeholder="Total price (e.g. 3000)"
+                        value={coursePrice}
+                        onChange={(e) => setCoursePrice(e.target.value)}
+                        className="w-full p-2 border rounded-lg"
+                        />
+                    </>
+                )}
                 <Button onClick={handleSaveStudent}>
                     {editingId ? "Update" : "Save"}
                 </Button>
@@ -183,10 +249,12 @@ export default function StudentsPage() {
                             </div>
                             {/* INFO */}
                             <div>
-                            <p className="font-semibold">{student.name}</p>
-                            <p className="text-sm text-gray-500">
-                                {student.hourly_rate}฿ / hour
-                            </p>
+                                <p className="font-semibold">{student.name}</p>
+                                <p className="text-sm text-gray-500">
+                                    {student.pricing_type === "hourly"
+                                        ? `${student.hourly_rate}฿ / hour`
+                                        : `${student.course_total_classes} classes • ${student.course_price}฿`}
+                                </p>
                             </div>
 
                         </div>
