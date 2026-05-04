@@ -5,13 +5,15 @@ import { supabase } from "../../lib/supabase";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Pencil, Trash2 } from "lucide-react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 export default function StudentPage() {
     const { id } = useParams();
     const [student, setStudent] = useState<any>(null);
     const [classes, setClasses] = useState<any[]>([]);
     const [duration, setDuration] = useState("60");
-    const [date, setDate] = useState("");
+    const [date, setDate] = useState<Date | null>(null);
     const [user, setUser] = useState<any>(null);
     const [editingClass, setEditingClass] = useState<any>(null);
 
@@ -46,7 +48,7 @@ export default function StudentPage() {
     // Edit handler
     function handleEditClass(c: any) {
         setEditingClass(c);
-        setDate(c.date.slice(0, 16)); // for datetime-local
+        setDate(new Date(c.date));
         setDuration(String(c.duration));
     }
 
@@ -74,7 +76,7 @@ export default function StudentPage() {
             const { error } = await supabase
             .from("classes")
             .update({
-                date,
+                date: date?.toISOString(),
                 duration: Number(duration),
             })
             .eq("id", editingClass.id);
@@ -86,13 +88,13 @@ export default function StudentPage() {
             {
                 student_id: id,
                 teacher_id: user.id,
-                date,
+                date: date?.toISOString(),
                 duration: Number(duration),
             },
             ]);
             if (error) return console.error(error);
         }
-        setDate("");
+        setDate(null);
         setDuration("60");
         fetchClasses();
     }
@@ -173,11 +175,14 @@ export default function StudentPage() {
         {/* ADD CLASS */}
         <div className="mt-6 p-4 border rounded-xl">
             <h2 className="font-semibold mb-2">Add Class</h2>
-            <input
-                type="datetime-local"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full mb-2 p-2 border rounded"
+            <DatePicker
+                selected={date ? new Date(date) : null}
+                onChange={(d: Date | null) => setDate(d)}
+                showTimeSelect
+                timeIntervals={15}
+                timeFormat="HH:mm"
+                dateFormat="dd/MM/yyyy HH:mm"
+                className="w-full p-2 border rounded"
             />
             <input
                 type="number"
